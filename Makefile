@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := everything
 
-wasm: client/primes.go
+wasm: client/bigprimes.go
 	 cd client && GOOS=js GOARCH=wasm go build -o primes.wasm
 
 # not really a command but ez way to store commands so
