@@ -16,7 +16,7 @@
 
             gotalk.handle("receive-job", function (params, result) {
 
-                WebAssembly.instantiateStreaming(fetch("params.wasm"), go.importObject).then((result) => {
+                WebAssembly.instantiateStreaming(fetch("primes.wasm"), go.importObject).then((result) => {
                     result("queued")
 
                     (function () {
@@ -32,7 +32,7 @@
 
                         go.argv = ["js"].concat(params.argv);
                         go.run(result.instance);
-                        s.request("job-complete", {result: output})
+                        setTimeout(function () {s.request("job-complete", {result: output})}, 5000);
 
                     }());
 
