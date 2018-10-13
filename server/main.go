@@ -24,9 +24,12 @@ func main() {
 	//})
 
 	// RESOURCE STUFFS
-	gotalk.Handle("resource-available",
-		fun", nil
+	gotalk.Handle("resource-used",
+		func(s *gotalk.Sock, r node.Resource) (string, error) {
+			serverThis.Socks[s].UpdateResourceAvailable(r)
+			return "Okay", nil
 		})
+
 	gotalk.Handle("resource-used",
 		func(s *gotalk.Sock, r node.Resource) (string, error) {
 			serverThis.Socks[s].UpdateResourceUsed(r)
