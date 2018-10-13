@@ -1,0 +1,15 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<script src="wasm_exec.js"></script>
+    
+		<script>
+			const go = new Go();
+			WebAssembly.instantiateStreaming(fetch("primes.wasm"), go.importObject).then((result) => {
+        go.argv = ["js", "5", "20"];
+				go.run(result.instance);
+			});
+		</script>
+	</head>
+	<body></body>
+</html>
