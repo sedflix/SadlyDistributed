@@ -34,16 +34,6 @@ func (nodes Nodes) AddNode(sock *gotalk.Sock) *Node {
 	node.IsNew = true
 	node.ResourceAvailable = Resource{0, 0}
 	node.ResourceUsed = Resource{0, 0}
-
-	fmt.Println(sock.Addr())
-	// TODO: // Delete handler
-	//sock.CloseHandler = func(s *gotalk.Sock, _ int) {
-	//	nodes.rw.Lock()
-	//	defer nodes.rw.Unlock()
-	//
-	//}
-
-	// add the node to the Nodes struct
 	nodes.rw.Lock()
 	defer nodes.rw.Unlock()
 	nodes.Nodes = append(nodes.Nodes, node)

@@ -1,48 +1,51 @@
 <html>
-	<head>
-		<meta charset="utf-8">
-		<script src="wasm_exec.js"></script>
-    
-		<script>
-      const go = new Go();
+<head>
+    <meta charset="utf-8">
+    <script src="/gotalk/gotalk.js"></script>
+    <script src="wasm_exec.js"></script>
 
-      var s = gotalk.connection().on('open', function () {
-        console.log('socket opened');
-      }).on('close', function (err) {
-        console.log('socket closed', err);
-      }).on('notification', function (n, v) {
-        console.log('received notification "'+name+'":', value);
-      });
+    <script>
+        const go = new Go();
 
-      s.request("resource-available", {cores: navigator.hardwareConcurrency, mem: 512}, function (err, result) {
-        if (err) return log('request for "resource-available" failed:', err);
-        console.log('received "greet" result:', result);
-      })
+        var s = gotalk.connection().on('open', function () {
+            console.log('socket opened');
+            s.request("resource-available", {cores: navigator.hardwareConcurrency, mem: 512}, function (err, result) {
+                if (err) return console.log('request for "resource-available" failed:', err);
+                console.log('received "greet" result:', result);
+            })
 
-      gotalk.handle("receive-job", function(params, result) {
+            gotalk.handle("receive-job", function (params, result) {
 
-        WebAssembly.instantiateStreaming(fetch("params.wasm"), go.importObject).then((result) => {
-          result("queued")
+                WebAssembly.instantiateStreaming(fetch("params.wasm"), go.importObject).then((result) => {
+                    result("queued")
 
-          (function () {
-            var log = console.log;
-            var output = ""
-            console.log = function () {
-              var args = Array.prototype.slice.call(arguments)
-              output += args.map(function (x) {return x.toString()})
-              log.apply(this, args);
-            };
+                    (function () {
+                        var log = console.log;
+                        var output = ""
+                        console.log = function () {
+                            var args = Array.prototype.slice.call(arguments)
+                            output += args.map(function (x) {
+                                return x.toString()
+                            })
+                            log.apply(this, args);
+                        };
 
-            go.argv = ["js"].concat(params.argv);
-            go.run(result.instance);
-            s.request("job-complete", {result: output})
+                        go.argv = ["js"].concat(params.argv);
+                        go.run(result.instance);
+                        s.request("job-complete", {result: output})
 
-          }());
+                    }());
 
+                });
+            })
+        }).on('close', function (err) {
+            console.log('socket closed', err);
+        }).on('notification', function (n, v) {
+            console.log('received notification "' + name + '":', value);
         });
-      })
 
-		</script>
-	</head>
-	<body></body>
+
+    </script>
+</head>
+<body></body>
 </html>

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/geekSiddharth/hackinout/server/node"
 	"github.com/geekSiddharth/hackinout/server/server"
 	"github.com/rsms/gotalk"
@@ -12,7 +13,16 @@ var (
 )
 
 func onAcceptConnection(sock *gotalk.Sock) {
+
+	fmt.Println("Accepted: ", sock.Addr())
 	serverThis.Socks[sock] = serverThis.Nodes.AddNode(sock)
+	// TODO: Add locks here
+	sock.CloseHandler = func(s *gotalk.Sock, _ int) {
+		delete(serverThis.Socks, sock)
+		fmt.Println("Closed")
+	}
+
+	// add the node to the Nodes struct
 }
 
 func main() {
@@ -24,7 +34,7 @@ func main() {
 	//})
 
 	// RESOURCE STUFFS
-	gotalk.Handle("resource-used",
+	gotalk.Handle("resource-available",
 		func(s *gotalk.Sock, r node.Resource) (string, error) {
 			serverThis.Socks[s].UpdateResourceAvailable(r)
 			return "Okay", nil
