@@ -16,5 +16,5 @@ type Parameters struct {
 }
 
 type Result struct {
-	res int
+	result string `json:"result"`
 }

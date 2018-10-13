@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/rsms/gotalk"
 	"sync"
+	"time"
 )
 
 type Node struct {
@@ -11,6 +12,7 @@ type Node struct {
 	ResourceAvailable Resource
 	ResourceUsed      Resource
 	IsNew             bool
+	TTL               time.Duration
 	//Job               job.Job // job currently assigned // TODO: make it an array
 	rw sync.RWMutex
 }
@@ -28,16 +30,14 @@ type Resource struct {
 }
 
 // adds a sock to a Nodes
-func (nodes Nodes) AddNode(sock *gotalk.Sock) *Node {
+func GetNode(sock *gotalk.Sock) Node {
 	node := Node{}
 	node.Sock = sock
 	node.IsNew = true
 	node.ResourceAvailable = Resource{0, 0}
 	node.ResourceUsed = Resource{0, 0}
-	nodes.rw.Lock()
-	defer nodes.rw.Unlock()
-	nodes.Nodes = append(nodes.Nodes, node)
-	return &node
+	node.TTL = 5 * time.Second
+	return node
 }
 
 func (node Node) UpdateResourceUsed(r Resource) {
@@ -52,4 +52,19 @@ func (node Node) UpdateResourceAvailable(r Resource) {
 	defer node.rw.Unlock()
 	node.ResourceAvailable = r
 	fmt.Printf("available resource: %+v\n", r)
+}
+
+func (nodes *Nodes) GetAvailableNodes() []*Node {
+	nodes.rw.RLock()
+	defer nodes.rw.RUnlock()
+	availableNodes := make([]*Node, 0)
+	fmt.Printf("Number of total nodes %d ", len(nodes.Nodes))
+	for _, node := range nodes.Nodes {
+		//if node.ResourceAvailable.Cores-node.ResourceUsed.Cores > 0 {
+		if node.IsNew {
+			availableNodes = append(availableNodes, &node)
+		}
+	}
+	return availableNodes
+
 }
