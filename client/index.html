@@ -4,11 +4,44 @@
 		<script src="wasm_exec.js"></script>
     
 		<script>
-			const go = new Go();
-			WebAssembly.instantiateStreaming(fetch("primes.wasm"), go.importObject).then((result) => {
-        go.argv = ["js", "5", "20"];
-				go.run(result.instance);
-			});
+      const go = new Go();
+
+      var s = gotalk.connection().on('open', function () {
+        console.log('socket opened');
+      }).on('close', function (err) {
+        console.log('socket closed', err);
+      }).on('notification', function (n, v) {
+        console.log('received notification "'+name+'":', value);
+      });
+
+      s.request("resource-available", {cores: navigator.hardwareConcurrency, mem: 512}, function (err, result) {
+        if (err) return log('request for "resource-available" failed:', err);
+        console.log('received "greet" result:', result);
+      })
+
+      gotalk.handle("receive-job", function(params, result) {
+
+        WebAssembly.instantiateStreaming(fetch("params.wasm"), go.importObject).then((result) => {
+          result("queued")
+
+          (function () {
+            var log = console.log;
+            var output = ""
+            console.log = function () {
+              var args = Array.prototype.slice.call(arguments)
+              output += args.map(function (x) {return x.toString()})
+              log.apply(this, args);
+            };
+
+            go.argv = ["js"].concat(params.argv);
+            go.run(result.instance);
+            s.request("job-complete", {result: output})
+
+          }());
+
+        });
+      })
+
 		</script>
 	</head>
 	<body></body>
