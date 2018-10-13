@@ -1,8 +1,8 @@
 package job
 
 import (
-	"github.com/geekSiddharth/hackinout/server/node"
-	"github.com/geekSiddharth/hackinout/server/program"
+	"github.com/geekSiddharth/inout/server/node"
+	"github.com/geekSiddharth/inout/server/program"
 	"sync"
 	"time"
 )

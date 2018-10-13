@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/geekSiddharth/hackinout/server/node"
-	"github.com/geekSiddharth/hackinout/server/server"
+	"github.com/geekSiddharth/inout/server/node"
+	"github.com/geekSiddharth/inout/server/server"
 	"github.com/rsms/gotalk"
 	"net/http"
 )
