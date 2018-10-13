@@ -8,6 +8,8 @@ import (
 	"github.com/geekSiddharth/inout/server/server"
 	"github.com/rsms/gotalk"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -15,26 +17,59 @@ var (
 	serverThis server.Server
 )
 
+type SendJob struct {
+	Id        string `json:"id"`
+	Wasm      string `json:"wasm"`      //path of the wasm
+	Parameter string `json:"parameter"` // input parameter
+}
+
+type JobRecieveResponse struct {
+	IsOkay string `json:"is_okay"`
+}
+
 func scheduler() {
 	for {
-
 		serverThis.RWSocks.RLock()
-
 		// go through all the sockets
 		for sockThis, node_ := range serverThis.Socks {
 			if node_.IsNew == true {
 				fmt.Printf("node avail: %s \n", node_.Sock.Addr())
 				// do error checking
-				toBeScheduledJob, err := serverThis.Jobs.GetTopJob()
-				if err == nil {
-					fmt.Printf("Job found\n")
-					toBeScheduledJob = toBeScheduledJob.SetNode(&node_)
-					node_.IsNew = false
-					serverThis.Socks[sockThis] = node_
-					toBeScheduledJob = toBeScheduledJob.SendIt()
-				} else {
-					fmt.Println("Jobs not found")
+				serverThis.RWJobs.Lock()
+				for job_id, job_ := range serverThis.Jobs {
+					if job_.IsScheduled == false {
+						//schedule it
+						sendJob := SendJob{
+							Id:        job_id,
+							Parameter: "parameters for " + job_id,
+							Wasm:      "Wasm path for " + job_id,
+						}
+						go func() {
+							jobRecieveResponse := &JobRecieveResponse{}
+							err := sockThis.Request("receive-job", &sendJob, jobRecieveResponse)
+							if err != nil {
+								fmt.Println(err)
+							} else {
+
+								if strings.Compare(jobRecieveResponse.IsOkay, "Okay") == 0 {
+									job_.IsScheduled = true
+									job_.ScheduledTime = time.Now()
+									job_.Sock = sockThis
+
+									node_.IsNew = false
+									serverThis.Socks[sockThis] = node_
+								} else {
+									fmt.Printf("Job Receive Response error: %s \n", jobRecieveResponse.IsOkay)
+								}
+
+							}
+							return
+						}()
+						break
+					}
 				}
+				serverThis.RWJobs.Unlock()
+
 			} else {
 				fmt.Printf("node busy: %s \n", node_.Sock.Addr())
 			}
@@ -47,13 +82,25 @@ func scheduler() {
 
 func handleJobComplete(s *gotalk.Sock, r program.Result) (string, error) {
 	fmt.Println("in job complete handler")
-	serverThis.RWSocks.Lock()
 
+	// Making the socket free
+	serverThis.RWSocks.Lock()
 	node_ := serverThis.Socks[s]
 	node_.IsNew = true
 	serverThis.Socks[s] = node_
-
 	serverThis.RWSocks.Unlock()
+
+	// delete the job and write to a file
+	serverThis.RWJobs.Lock()
+	job_ := serverThis.Jobs[r.Id]
+	job_.JobResult = r
+
+	// delete job
+	delete(serverThis.Jobs, r.Id)
+
+	//write to a file
+	// TODO : Delete from jobs and send it to a channel
+	serverThis.RWJobs.Unlock()
 	fmt.Printf("Job Completed: %+v\n", r)
 	return "Okay", nil
 }
@@ -87,8 +134,12 @@ func main() {
 	// adding lots of of jobs for test
 
 	go func() {
-		for i := 0; i < 10; i++ {
-			serverThis.Jobs.AddJob(job.MakeRandomJob())
+		var i int64;
+		for i = 0; i < 10; i++ {
+			_id := strconv.FormatInt(i, 10)
+			serverThis.Jobs[_id] = job.Job{
+				Id: _id,
+			}
 		}
 	}()
 
