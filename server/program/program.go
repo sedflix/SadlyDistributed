@@ -16,5 +16,6 @@ type Parameters struct {
 }
 
 type Result struct {
-	result string `json:"result"`
+	Id     string `json:"id"`
+	Result string `json:"result"`
 }

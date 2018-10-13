@@ -9,15 +9,17 @@ import (
 )
 
 type Server struct {
-	Programs  program.Programs
-	Jobs      job.Jobs
-	Socks     map[*gotalk.Sock]node.Node
-	RWSocks sync.RWMutex
+	Programs   map[string]program.Programs
+	RWPrograms sync.RWMutex
+	Jobs       map[string]job.Job
+	RWJobs     sync.RWMutex
+	Socks      map[*gotalk.Sock]node.Node
+	RWSocks    sync.RWMutex
 }
 
 func (server *Server) Init() {
-	server.Programs = program.Programs{}
-	server.Jobs = job.Jobs{}
+	server.Programs = make(map[string]program.Programs)
+	server.Jobs = make(map[string]job.Job)
 	server.Socks = make(map[*gotalk.Sock]node.Node)
 }
 
