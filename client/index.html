@@ -5,60 +5,50 @@
     <script src="wasm_exec.js"></script>
 
     <script>
-        const go = new Go();
+      function noop() {}
 
-        var s = gotalk.connection().on('open', function () {
-            console.log('socket opened');
-            s.request("resource-available", {cores: navigator.hardwareConcurrency, mem: 512}, function (err, result) {
-                if (err) return console.log('request for "resource-available" failed:', err);
-                console.log('received "greet" result:', result);
-            });
+      const go = new Go();
+
+      var s = gotalk.connection().on('open', function () {
+        console.log('socket opened');
+        s.request("resource-available", {cores: navigator.hardwareConcurrency, mem: 512}, function (err, result) {
+            if (err) return console.log('request for "resource-available" failed:', err);
+            console.log('', result);
+        });
 
 
-            gotalk.handle("receive-job", function (params, result) {
+        gotalk.handle("receive-job", function (params, result) {
 
-                console.log("Recieved " + params)
-                setTimeout(function () {
-                    s.request("job-complete", {id: params.id, result: '123'}, function (err, result) {
-                        if (err) return console.log('request for "job complete" failed:', err);
-                        console.log('received job-complete result:', result);
+          console.log("got a job", params)
 
-                    })
-                }, 5000);
+          result({"is_okay": "Okay"});
 
-                console.log("Exit giving the result")
-                result({"is_okay": "Okay"});
+          WebAssembly.instantiateStreaming(fetch("primes/bigprimes.wasm"), go.importObject).then((result) => {
+            setTimeout(function () {
+              var log = console.log;
+              var output = ""
+              console.log = function () {
+                  var args = Array.prototype.slice.call(arguments)
+                  output += args.map(function (x) {
+                      return String(x)
+                  })
+                  log.apply(this, args);
+              };
 
-                // return result
-                /*
-                WebAssembly.instantiateStreaming(fetch("primes.wasm"), go.importObject).then((result) => {
-                    result("queued")
+              go.argv = ["js"].concat(["10", "20"]); // params.argv
+              go.run(result.instance);
+              s.request("job-complete", {id: params.id, result: output}, noop);
+              log("finished job", output)
+            }, 0);
 
-                    (function () {
-                        var log = console.log;
-                        var output = ""
-                        console.log = function () {
-                            var args = Array.prototype.slice.call(arguments)
-                            output += args.map(function (x) {
-                                return x.toString()
-                            })
-                            log.apply(this, args);
-                        };
-
-                        go.argv = ["js"].concat(params.argv);
-                        go.run(result.instance);
-                        setTimeout(function () {s.request("job-complete", {result: output})}, 5000);
-
-                    }());
-
-                });
-                */
-            })
+            result("queued")
+          });
+        });
 
         }).on('close', function (err) {
-            console.log('socket closed', err);
+          console.log('socket closed', err);
         }).on('notification', function (n, v) {
-            console.log('received notification "' + name + '":', value);
+          console.log('received notification "' + name + '":', value);
         });
 
 
