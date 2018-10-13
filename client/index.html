@@ -16,7 +16,7 @@
 
             gotalk.handle("receive-job", function (params, result) {
 
-                WebAssembly.instantiateStreaming(fetch("primes.wasm"), go.importObject).then((result) => {
+                WebAssembly.instantiateStreaming(fetch("primes/bigprimes.wasm"), go.importObject).then((result) => {
                     result("queued")
 
                     (function () {
