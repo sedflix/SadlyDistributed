@@ -1,21 +1,12 @@
 package program
 
-import "sync"
-
 type Program struct {
-}
-
-type Programs struct {
-	rw       sync.RWMutex
-	programs []Program
-}
-
-type Parameters struct {
-	start int
-	end   int
+	Id string
 }
 
 type Result struct {
-	Id     string `json:"id"`
-	Result string `json:"result"`
+	JobId      string `json:"job_id"`
+	ProgramId  string `json:"program_id"`
+	Parameters string `json:"parameters"`
+	Result     string `json:"result"`
 }

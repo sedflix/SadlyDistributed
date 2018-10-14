@@ -1,4 +1,4 @@
-package main
+package inout
 
 import (
 	"fmt"
@@ -6,8 +6,11 @@ import (
 	"github.com/geekSiddharth/inout/server/node"
 	"github.com/geekSiddharth/inout/server/program"
 	"github.com/geekSiddharth/inout/server/server"
+	"github.com/hpcloud/tail"
 	"github.com/rsms/gotalk"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,15 +18,18 @@ import (
 
 var (
 	serverThis server.Server
+	// TODO: number of result that can be queued
+	resultChan = make(chan program.Result, 10)
 )
 
 type SendJob struct {
-	Id        string `json:"id"`
-	Wasm      string `json:"wasm"`      //path of the wasm
-	Parameter string `json:"parameter"` // input parameter
+	JobId      string `json:"job_id"`
+	ProgramId  string `json:"program_id"`
+	Wasm       string `json:"wasm"`       //path of the wasm
+	Parameters string `json:"parameters"` // input parameter
 }
 
-type JobRecieveResponse struct {
+type JobReceiveResponse struct {
 	IsOkay string `json:"is_okay"`
 }
 
@@ -40,12 +46,13 @@ func scheduler() {
 					if job_.IsScheduled == false {
 						//schedule it
 						sendJob := SendJob{
-							Id:        job_id,
-							Parameter: "parameters for " + job_id,
-							Wasm:      "Wasm path for " + job_id,
+							JobId:      job_.Id,
+							ProgramId:  job_.ProgramId,
+							Parameters: job_.Parameters,
+							Wasm:       "Wasm path for " + job_id,
 						}
 						go func() {
-							jobRecieveResponse := &JobRecieveResponse{}
+							jobRecieveResponse := &JobReceiveResponse{}
 							err := sockThis.Request("receive-job", &sendJob, jobRecieveResponse)
 							if err != nil {
 								fmt.Println(err)
@@ -92,17 +99,29 @@ func handleJobComplete(s *gotalk.Sock, r program.Result) (string, error) {
 
 	// delete the job and write to a file
 	serverThis.RWJobs.Lock()
-	job_ := serverThis.Jobs[r.Id]
-	job_.JobResult = r
+	// why not write result to the job
 
 	// delete job
-	delete(serverThis.Jobs, r.Id)
-
-	//write to a file
-	// TODO : Delete from jobs and send it to a channel
+	delete(serverThis.Jobs, r.JobId)
 	serverThis.RWJobs.Unlock()
+
+	// write to file
+	resultChan <- r
+
 	fmt.Printf("Job Completed: %+v\n", r)
 	return "Okay", nil
+}
+
+func resultChanFeeder() {
+	for r := range resultChan {
+		f, err := os.OpenFile(r.ProgramId+"_output", os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			fmt.Printf("UNABLE to write: %s \n", r.ProgramId)
+		}
+
+		defer f.Close()
+		fmt.Fprintf(f, "%s\t%s\n", r.Parameters, r.Result)
+	}
 }
 
 func onAcceptConnection(sock *gotalk.Sock) {
@@ -123,28 +142,58 @@ func onAcceptConnection(sock *gotalk.Sock) {
 	// add the node to the Nodes struct
 }
 
+func programJobCreator(programID string) {
+
+	t, err := tail.TailFile(programID+"_input", tail.Config{
+		Follow: true,
+		ReOpen: true,
+	})
+
+	if err != nil {
+		fmt.Println("Unable to open the file for program id: %d", programID)
+		log.Fatal(err)
+		return
+	}
+	for line := range t.Lines {
+		text := strings.Trim(line.Text, "\n\t\r")
+
+		switch text {
+		case "<end>":
+			// End creating news jobs
+			return
+		case "<end_all>":
+			// jon through jobs and delete all the jobs of this kind
+			// TODO: KILLL MEEEEEE
+			return
+		default:
+			newJob := job.Job{
+				ProgramId:    programID,
+				Parameters:   text,
+				CreationTime: time.Now(),
+			}
+
+			serverThis.RWJobs.Lock()
+			_id := strconv.FormatInt(int64(len(serverThis.Jobs)+1), 10)
+			newJob.Id = _id
+			serverThis.Jobs[_id] = newJob
+			serverThis.RWJobs.Unlock()
+		}
+	}
+
+}
+
 func main() {
 	serverThis = server.Server{}
 	serverThis.Init()
 
-	//gotalk.HandleBufferRequest("ech0", func(s *gotalk.Sock, op string, b []byte) ([]byte, error) {
-	//	return b, nil
-	//})
-
-	// adding lots of of jobs for test
-
-	go func() {
-		var i int64;
-		for i = 0; i < 10; i++ {
-			_id := strconv.FormatInt(i, 10)
-			serverThis.Jobs[_id] = job.Job{
-				Id: _id,
-			}
-		}
-	}()
-
 	// starting scheduler in background
 	go scheduler()
+
+	// writes result to a file
+	go resultChanFeeder()
+
+	// TODO: Make it dynamic -> Progr
+	go programJobCreator("1")
 
 	// Handle Result
 	gotalk.Handle("job-complete", handleJobComplete)

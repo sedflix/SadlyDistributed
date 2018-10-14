@@ -9,7 +9,7 @@ import (
 )
 
 type Server struct {
-	Programs   map[string]program.Programs
+	Programs   map[string]program.Program
 	RWPrograms sync.RWMutex
 	Jobs       map[string]job.Job
 	RWJobs     sync.RWMutex
@@ -18,7 +18,7 @@ type Server struct {
 }
 
 func (server *Server) Init() {
-	server.Programs = make(map[string]program.Programs)
+	server.Programs = make(map[string]program.Program)
 	server.Jobs = make(map[string]job.Job)
 	server.Socks = make(map[*gotalk.Sock]node.Node)
 }

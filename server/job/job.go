@@ -1,18 +1,14 @@
 package job
 
 import (
-	"fmt"
-	"github.com/geekSiddharth/inout/server/program"
 	"github.com/rsms/gotalk"
-	"log"
 	"time"
 )
 
 type Job struct {
 	Id            string
 	ProgramId     string
-	JobParameter  program.Parameters
-	JobResult     program.Result
+	Parameters     string
 	Sock          *gotalk.Sock
 	IsScheduled   bool
 	IsSent        bool
@@ -21,11 +17,7 @@ type Job struct {
 	ScheduledTime time.Time // when was the job scheduled
 	SentTime      time.Time // when was the job sent
 	ComputedTime  time.Time // when was the result returned
-}
-
-type SendJob struct {
-	Wasm      string `json:"wasm"`      //path of the wasm
-	Parameter string `json:"parameter"` // input parameter
+	CreationTime  time.Time // when was the job created
 }
 
 //type Jobs struct {
@@ -61,27 +53,27 @@ type SendJob struct {
 //	return job
 //}
 
-func jobToSendJob(job Job) (SendJob) {
-	sendJob := SendJob{}
-	sendJob.Parameter = "so wow parameters"
-	sendJob.Wasm = "so wow wasm"
-	return sendJob
-}
-
-type NAA struct {
-	Res string `json:"res"`
-}
-
-func SendingIt(sock gotalk.Sock, sendjob SendJob, naa NAA) {
-	err := sock.Request("receive-job", &sendjob, naa)
-	fmt.Println("After sending Request")
-	if err != nil {
-		log.Fatal("Unable to send job: ")
-	} else {
-		fmt.Println("Job Sen!! t")
-	}
-
-}
+//func jobToSendJob(job Job) (SendJob) {
+//	sendJob := SendJob{}
+//	sendJob.Parameter = "so wow parameters"
+//	sendJob.Wasm = "so wow wasm"
+//	return sendJob
+//}
+//
+//type NAA struct {
+//	Res string `json:"res"`
+//}
+//
+//func SendingIt(sock gotalk.Sock, sendjob SendJob, naa NAA) {
+//	err := sock.Request("receive-job", &sendjob, naa)
+//	fmt.Println("After sending Request")
+//	if err != nil {
+//		log.Fatal("Unable to send job: ")
+//	} else {
+//		fmt.Println("Job Sen!! t")
+//	}
+//
+//}
 
 //func (job Job) SendIt() (Job) {
 //	sendJob := jobToSendJob(job)
