@@ -1,4 +1,4 @@
-package main
+package primes
 
 import "os"
 import "math/big"
