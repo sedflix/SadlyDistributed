@@ -47,7 +47,7 @@ func scheduler() {
 		// go through all the sockets
 		for sockThis, node_ := range serverThis.Socks {
 			if node_.IsNew == true {
-				fmt.Printf("node avail: %s \n", node_.Sock.Addr())
+				//fmt.Printf("node avail: %s \n", node_.Sock.Addr())
 				// do error checking
 				serverThis.RWJobs.Lock()
 				for _, job_ := range serverThis.Jobs {
@@ -83,7 +83,7 @@ func scheduler() {
 				} // Jobs loops end
 				serverThis.RWJobs.Unlock()
 			} else {
-				fmt.Printf("node busy: %s \n", node_.Sock.Addr())
+				//fmt.Printf("node busy: %s \n", node_.Sock.Addr())
 			}
 		}
 		//time.Sleep(1 * time.Second)
@@ -202,10 +202,11 @@ func onAcceptConnection(sock *gotalk.Sock) {
 				serverThis.Jobs[job_id] = job_
 			}
 		}
-		serverThis.RWSocks.Lock()
+		serverThis.RWJobs.Unlock()
 
-		defer serverThis.RWSocks.Unlock()
+		serverThis.RWSocks.Lock()
 		delete(serverThis.Socks, s)
+		serverThis.RWSocks.Unlock()
 		fmt.Println("Closed")
 	}
 }
@@ -250,7 +251,7 @@ func main() {
 	webSocketHandler.OnAccept = onAcceptConnection
 	http.Handle("/gotalk/", webSocketHandler)
 	http.Handle("/", http.FileServer(http.Dir("./client")))
-	err := http.ListenAndServe("0.0.0.0:1233", nil)
+	err := http.ListenAndServe("0.0.0.0:1237", nil)
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())
 	}
