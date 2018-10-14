@@ -1,60 +1,60 @@
-# Server
+# SadlyDistributed
 
-## Data Structure
-- Program
-- Job
-- Node
-- Program List
-- Nodes List
-- Jobs Queue
+ Making volunteer computing easy af.  
+ Zero Setup for volunteers. Easy for developers.  
+ 
+ We compile **your distributed code in almost any language** to **WebAssembly** and then all of it is **executed in a cluster of browsers**.
+ Anyone who just opens our website in their browser will become share his or her computing power with us.
 
-## Functions 
-- Program To Jobs 
-- Task Scheduler (Global): Job to Node matching 
-- Add Node
-- Remove Node
-- Receive Info From Node
-    - Receives any message
-    - forwards it to apt function
-- Send Job To Node
-    - a function that keeps on checking Job array and it sends the scheduled tasks to the scheduled node and make necessary changes to the job
-- Result Aggregator
-    - Runs for each program
-    - 
-    
-###  Handlers at teh server side functions
-- receive-job:  (json)
-    - It should send the following: 
-        - IsOkay string `json:"is_okay"`
-    - It should accept:   (json)
-    	- JobId      string `json:"job_id"`
-    	- ProgramId  string `json:"program_id"`
-    	- Wasm       string `json:"wasm"`       //path of the wasm
-    	- Parameters string `json:"parameters"` // input parameter
-        
-### Handlers at teh server side 
-- resource-available: returns a json with the following fields
-    - accepts  (json)
-        - cores
-        - mem
-    - returns 
-        - Okay
-- resource-used: accepts a json with the fields same as above and send "Okay"
-- job-complete: called after a task is done
-    - accepts (json)
-        - JobId      string `json:"job_id"`
-        - ProgramId  string `json:"program_id"`
-        - Parameters string `json:"parameters"`
-        - Result     string `json:"result"`
-    - returns
-        - "Okay"
+## Installation 
+We <3 Docker. Hence, we have provided a Dockerfile that takes care of all the dependencies of our server code.
 
+#### Building Docker file
+```
+    docker build -t sadlyDistributed .
+```
 
-### Task config
- - file_name:  `<program_id>_input` should contains the input parameter
- - each line should contain the parameter
- - the parameter is passed as it is to the receive-job  handler on the browser
-### Result Config
-   I will result of the input taken from `<program_id>_input` to this file
-  - file_name: `<program_id>_output`. 
-  - Each row is like: <parameter>\t<Result>
+#### Running our Server(with Prime Number Example)
+```
+    docker run -it -p 8899:8899 sadlyDistributed
+```
+ 
+## Mini-Tutorial
+**How can you modify your distributed code for our architecture?**  
+
+We have an example program for finding if a number(it can be as large as you can think of) is prime or not. 
+Code: [/client/programs/1](/client/programs/1)  
+
+In general distributed computer, same code is replicated on multiple machines and each machine execute the code over a different range of values(or parameters). 
+The output from multiple machines is combined to produce the final output. Your job, as developer, is to give us your pre-existing distributed code, 
+in almost any language. The code should take `input from stdin` and gives `output to stdout`. 
+After that, you need to define how the range of values should be *divided* and how the results from them should be *combined* to produce the final answer.
+After you have defined this logic, we scale your code to all the browsers available to us.  
+
+You code interface with our architecture by reading and writing from files. We have two files:
+- `input`: You specify the parameters that your code will take in. Each parameters is present in a new line. Our prime number uses the following format:
+```
+1 110000
+110000 9990000
+9990000 99900000
+99900000 99900000
+<number 1><space><number 2>
+
+```
+Note that our distributed code, `bigprimes.go`, is written to understand these range. In other words, 
+`go run bigprimes.go 110000 9990000` will tell us weather our hardcoded number is divisible by anything between 110000 and 9990000. 
+Our architecture read this file continuously(as new input arrives or so called tail reading) and distributes the parameters over free nodes.
+
+- `output`: Our architecture writes the stdout(or output) received from various machine to this file.
+Now it is upto you to utilize the info in this file for combining the result. Our prime number used the following format:
+```
+1 110000    false
+99900000 99900000   false
+110000 9990000  false
+<parameter><tab><output>
+```
+The parameter is same as specified in the input file. And the output is what your code wrote to stdout when given those parameters.
+Our architecture updates this file as it receives output from different browsers.
+
+In our prime number example, we use two file in two different language to show how **our approach is language-agnostic**.
+We have used GoLang for the code that needs to be distributed. And we have used python for generating inputs and combining the output. Neat, right?
