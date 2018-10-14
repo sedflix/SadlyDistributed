@@ -141,9 +141,9 @@ func programJobCreator(programID string) {
 
 	t, err := tail.TailFile("./client/programs/"+programID+"/input",
 		tail.Config{
-			Follow: true,
+      Follow: true,
 			ReOpen: true,
-			Pipe:   true,
+      Poll: true,
 		})
 
 	if err != nil {
