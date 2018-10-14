@@ -1,8 +1,5 @@
-from flask import Flask
-import threading
 import math
-
-app = Flask(__name__)
+import threading
 
 prime = 100000007
 
@@ -15,11 +12,11 @@ tasks_available = set()
 tasks_pending = set()
 
 i = 0
-while i*bucket_size < math.sqrt(prime):
-    tasks_available.add((i*bucket_size, (i+1)*bucket_size))
+while i * bucket_size < math.sqrt(prime):
+    tasks_available.add((i * bucket_size, (i + 1) * bucket_size))
     i += 1
 
-@app.route("/get-task")
+
 def getTask():
     global is_prime
     if is_prime:
@@ -30,14 +27,31 @@ def getTask():
         else:
             return "<end>"
     else:
-        return "<end>" # end all?
+        return "<end>"
 
 
-@app.route("/result/<yay>")
-def respondToInput(yay): # runs in own thread
+def writeTasks():
+    outfile = open("1_input", "w")
+    while len(tasks_pending) < 100 and tasks_available:
+        task = getTask()
+        outfile.write(task + "\n")
+        outfile.flush()
+
+
+def respondToInput():  # runs in own thread
     global is_prime
-    result = yay.split("\t")[1]
-    if result == "true":
-        is_prime = False
+    infile = open("1_output", "r")
+    writeTasks()
+    for line in infile:
+        line = line[:-1]  # remove newline
+        if len(line.split("\t")) == 2:
+            result = line.split("\t")[1]
+            if result == "true":
+                is_prime = False
+        writeTasks()
 
-app.run(host="localhost", port="5005")
+
+inputThread = threading.Thread(target=respondToInput)
+inputThread.daemon = True
+inputThread.start()
+input("press any key to continue")
