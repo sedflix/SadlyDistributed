@@ -43,42 +43,48 @@ var s = gotalk.connection().on('open', function () {
     console.log('received notification "' + name + '":', value);
 });
 
+function hijackOutput(cb) {
+  var log = console.log;
+  var output = "";
+  console.log = function () {
+    var args = Array.prototype.slice.call(arguments);
+    output += args.map(function (x) {
+        return String(x)
+    });
+    log.apply(this, args);
+  };
+  cb(log);
+  console.log = log;
+  return output;
+}
+
 function instantiate_go_script(params) {
   const go = new Go();
   getCompiledWasmPromise(params.wasm)
     .then(function (compiled) {
-      console.log("got compiled", compiled)
+      //console.log("got compiled", compiled)
       return WebAssembly.instantiate(compiled, go.importObject)
     })
     .then((instantiated) => {
-      console.log("got instantiated", instantiated)
-      setTimeout(function () {
-        var log = console.log;
-        var output = "";
-        console.log = function () {
-          var args = Array.prototype.slice.call(arguments);
-          output += args.map(function (x) {
-              return String(x)
-          });
-          log.apply(this, args);
-        };
+      //console.log("got instantiated", instantiated)
+      var output = hijackOutput(function () {
 
         go.argv = ["js"].concat(params.parameters.split(" "));
         go.run(instantiated);
+      });
 
-        s.request("job-complete", {
-          job_id: params.job_id,
-          program_id: params.program_id,
-          parameters: params.parameters,
-          result: output
-        }, noop);
+      s.request("job-complete", {
+        job_id: params.job_id,
+        program_id: params.program_id,
+        parameters: params.parameters,
+        result: output
+      }, noop);
 
-        log("finished job", output);
-        vm.runningATask(false);
-        vm.tasksDone(vm.tasksDone() + 1)
-      }
-    )
-  })
+      console.log("finished job", output);
+      vm.runningATask(false);
+      vm.tasksDone(vm.tasksDone() + 1)
+    }
+  )
   .catch(x => console.log("error", x));
 };
 
