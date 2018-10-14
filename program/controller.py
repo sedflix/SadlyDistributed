@@ -24,28 +24,31 @@ def getTask():
             tasks_pending.add(task)
             return "%d %d" % task
         else:
-            return "no-task-available"
+            return "<end>"
     else:
-        return "no-task-available"
+        return "<end>"
 
+
+def writeTasks():
+    outfile = open("1_input", "w")
+    while len(tasks_pending) < 100 and tasks_available:
+        task = getTask()
+        outfile.write(task + "\n")
+        outfile.flush()
 
 def respondToInput(): # runs in own thread
     global is_prime
-    infile = open("infifo", "r")
-    outfile = open("outfifo", "w")
+    infile = open("1_output", "r")
+    writeTasks()
     for line in infile:
         line = line[:-1] # remove newline
-        print(is_prime)
-        if line == "get-task":
-            task = getTask()
-            outfile.write(task + "\n")
-            outfile.flush()
-        elif line[0:8] == "result: ":
-            result = line[8:]
+        if len(line.split("\t")) == 2:
+            result = line.split("\t")[1]
             if result == "true":
                 is_prime = False
+        writeTasks()
 
 inputThread = threading.Thread(target = respondToInput)
 inputThread.daemon = True
 inputThread.start()
-input()
+input("press any key to continue")
