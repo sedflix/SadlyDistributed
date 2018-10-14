@@ -1,4 +1,4 @@
-package inout
+package main
 
 import (
 	"fmt"
@@ -42,14 +42,14 @@ func scheduler() {
 				fmt.Printf("node avail: %s \n", node_.Sock.Addr())
 				// do error checking
 				serverThis.RWJobs.Lock()
-				for job_id, job_ := range serverThis.Jobs {
+				for _, job_ := range serverThis.Jobs {
 					if job_.IsScheduled == false {
 						//schedule it
 						sendJob := SendJob{
 							JobId:      job_.Id,
 							ProgramId:  job_.ProgramId,
 							Parameters: job_.Parameters,
-							Wasm:       "Wasm path for " + job_id,
+							Wasm:       "/primes/bigprimes.wasm",
 						}
 						go func() {
 							jobRecieveResponse := &JobReceiveResponse{}
@@ -121,25 +121,8 @@ func resultChanFeeder() {
 
 		defer f.Close()
 		fmt.Fprintf(f, "%s\t%s\n", r.Parameters, r.Result)
+		//fmt.Println(f, "get-task")
 	}
-}
-
-func onAcceptConnection(sock *gotalk.Sock) {
-	fmt.Println("Accepted: ", sock.Addr())
-
-	serverThis.RWSocks.Lock()
-	defer serverThis.RWSocks.Unlock()
-
-	serverThis.Socks[sock] = node.GetNode(sock)
-	// TODO: Add locks here
-	sock.CloseHandler = func(s *gotalk.Sock, _ int) {
-		serverThis.RWSocks.Lock()
-		defer serverThis.RWSocks.Unlock()
-		delete(serverThis.Socks, s)
-		fmt.Println("Closed")
-	}
-
-	// add the node to the Nodes struct
 }
 
 func programJobCreator(programID string) {
@@ -182,6 +165,24 @@ func programJobCreator(programID string) {
 
 }
 
+func onAcceptConnection(sock *gotalk.Sock) {
+	fmt.Println("Accepted: ", sock.Addr())
+
+	serverThis.RWSocks.Lock()
+	defer serverThis.RWSocks.Unlock()
+
+	serverThis.Socks[sock] = node.GetNode(sock)
+	// TODO: Add locks here
+	sock.CloseHandler = func(s *gotalk.Sock, _ int) {
+		serverThis.RWSocks.Lock()
+		defer serverThis.RWSocks.Unlock()
+		delete(serverThis.Socks, s)
+		fmt.Println("Closed")
+	}
+
+	// add the node to the Nodes struct
+}
+
 func main() {
 	serverThis = server.Server{}
 	serverThis.Init()
@@ -192,7 +193,7 @@ func main() {
 	// writes result to a file
 	go resultChanFeeder()
 
-	// TODO: Make it dynamic -> Progr
+	// TODO: Make it dynamic -> Program
 	go programJobCreator("1")
 
 	// Handle Result
