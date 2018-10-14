@@ -1,58 +1,74 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <script src="/gotalk/gotalk.js"></script>
-    <script src="wasm_exec.js"></script>
 
-    <script>
-      function noop() {}
-
-      const go = new Go();
-
-      var s = gotalk.connection().on('open', function () {
-        console.log('socket opened');
-        s.request("resource-available", {cores: navigator.hardwareConcurrency, mem: 512}, function (err, result) {
-            if (err) return console.log('request for "resource-available" failed:', err);
-            console.log('', result);
-        });
-
-
-        gotalk.handle("receive-job", function (params, result) {
-
-          console.log("got a job", params)
-
-          result({"is_okay": "Okay"});
-
-          WebAssembly.instantiateStreaming(fetch("primes/bigprimes.wasm"), go.importObject).then((result) => {
-            setTimeout(function () {
-              var log = console.log;
-              var output = ""
-              console.log = function () {
-                  var args = Array.prototype.slice.call(arguments)
-                  output += args.map(function (x) {
-                      return String(x)
-                  })
-                  log.apply(this, args);
-              };
-
-              go.argv = ["js"].concat(["10", "20"]); // params.argv
-              go.run(result.instance);
-              s.request("job-complete", {id: params.id, result: output}, noop);
-              log("finished job", output)
-            }, 0);
-
-            result("queued")
-          });
-        });
-
-        }).on('close', function (err) {
-          console.log('socket closed', err);
-        }).on('notification', function (n, v) {
-          console.log('received notification "' + name + '":', value);
-        });
-
-
-    </script>
 </head>
-<body></body>
+<body>
+  
+  <p data-bind="if: runningATask">Running a Task</p>
+  <p data-bind="if: tasksDone">Number of tasks done <span data-bind="text: tasksDone"></span></p>
+
+  <script src="/gotalk/gotalk.js"></script>
+  <script src="wasm_exec.js"></script>
+
+  <script>
+    function noop() {}
+
+    const go = new Go();
+
+    var s = gotalk.connection().on('open', function () {
+      console.log('socket opened');
+      s.request("resource-available", {cores: navigator.hardwareConcurrency, mem: 512}, function (err, result) {
+          if (err) return console.log('request for "resource-available" failed:', err);
+          console.log('', result);
+      });
+
+
+      gotalk.handle("receive-job", function (params, result) {
+
+        console.log("got a job", params)
+        vm.runningATask(true)
+
+        result({"is_okay": "Okay"});
+
+
+        WebAssembly.instantiateStreaming(fetch("primes/bigprimes.wasm"), go.importObject).then((result) => {
+          setTimeout(function () {
+            var log = console.log;
+            var output = ""
+            console.log = function () {
+                var args = Array.prototype.slice.call(arguments)
+                output += args.map(function (x) {
+                    return String(x)
+                })
+                log.apply(this, args);
+            };
+
+            go.argv = ["js"].concat(["10", "20"]); // params.argv
+            go.run(result.instance);
+            s.request("job-complete", {id: params.id, result: output}, noop);
+            log("finished job", output)
+            vm.runningATask(false)
+            vm.tasksDone(vm.tasksDone() + 1)
+          }, 0);
+
+          result("queued")
+        });
+      });
+    }).on('close', function (err) {
+      console.log('socket closed', err);
+    }).on('notification', function (n, v) {
+      console.log('received notification "' + name + '":', value);
+    });
+
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-min.js"></script>
+  <script>
+    var vm = {
+      runningATask: ko.observable(false),
+      tasksDone: ko.observable(0)
+    }
+    ko.applyBindings(vm)
+  </script>
+</body>
 </html>
