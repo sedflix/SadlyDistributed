@@ -25,6 +25,8 @@
         });
 
 
+        var memoized_wasm = {}
+
         gotalk.handle("receive-job", function (params, result) {
 
             console.log("got a job: ", params);
@@ -32,7 +34,8 @@
 
             result({"is_okay": "Okay"});
 
-            WebAssembly.instantiateStreaming(fetch(params.wasm), go.importObject).then((result) => {
+          function instantiate() {
+            var result = memoized_wasm[params.wasm];
                 setTimeout(function () {
                     var log = console.log;
                     var output = "";
@@ -58,7 +61,14 @@
                     vm.runningATask(false);
                     vm.tasksDone(vm.tasksDone() + 1)
                 }, 0);
-            });
+            };
+
+            if (!memoized_wasm[params.wasm]) {
+              WebAssembly.compileStreaming(fetch(params.wasm)).then((module) => memoized_wasm[params.wasm] = module).then(instantiate)
+            } else {
+              instantiate()
+            }
+
         });
     }).on('close', function (err) {
         console.log('socket closed', err);
