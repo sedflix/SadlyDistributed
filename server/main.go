@@ -49,7 +49,7 @@ func scheduler() {
 							JobId:      job_.Id,
 							ProgramId:  job_.ProgramId,
 							Parameters: job_.Parameters,
-							Wasm:       "/primes/bigprimes.wasm",
+							Wasm:       "/problems/" + job_.ProgramId + "/main.wasm",
 						}
 						go func() {
 							jobRecieveResponse := &JobReceiveResponse{}
