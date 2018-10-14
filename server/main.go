@@ -53,7 +53,7 @@ func scheduler() {
 							JobId:      job_.Id,
 							ProgramId:  job_.ProgramId,
 							Parameters: job_.Parameters,
-							Wasm:       "/../programs/" + job_.Id + "/" + job_.Id + ".wasm",
+							Wasm:       "/programs/" + job_.Id + "/main.wasm",
 						}
 						go func() {
 							jobRecieveResponse := &JobReceiveResponse{}
@@ -118,7 +118,7 @@ func handleJobComplete(s *gotalk.Sock, r program.Result) (string, error) {
 
 func resultChanFeeder() {
 	for r := range resultChan {
-		f, err := os.OpenFile(r.ProgramId+"_output", os.O_APPEND|os.O_WRONLY, 0600)
+		f, err := os.OpenFile("./programs/"+r.ProgramId+"/output", os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			fmt.Printf("UNABLE to write: %s \n", r.ProgramId)
 		}
@@ -130,11 +130,12 @@ func resultChanFeeder() {
 
 func programJobCreator(programID string) {
 
-	t, err := tail.TailFile(programID+"_input", tail.Config{
-		Follow: true,
-		ReOpen: true,
-		Pipe:   true,
-	})
+	t, err := tail.TailFile("./programs/"+programID+"/intput",
+		tail.Config{
+			Follow: true,
+			ReOpen: true,
+			Pipe:   true,
+		})
 
 	if err != nil {
 		fmt.Println("Unable to open the file for program id: %d", programID)
