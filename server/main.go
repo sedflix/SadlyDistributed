@@ -17,11 +17,11 @@ import (
 )
 
 var (
-	serverThis server.Server
-	// TODO: number of result that can be queued
-	resultChan = make(chan program.Result, 10)
+	serverThis server.Server                     // stores most of the info of the server
+	resultChan = make(chan program.Result, 1000) // results from sockets are fed into this common resultChan
 )
 
+// struct for sending a job to the client
 type SendJob struct {
 	JobId      string `json:"job_id"`
 	ProgramId  string `json:"program_id"`
@@ -29,14 +29,17 @@ type SendJob struct {
 	Parameters string `json:"parameters"` // input parameter
 }
 
+// pretty useless it is for time being
 type NewProgram struct {
 	ProgramId string `json:"program_id"`
 }
 
+// to know if the job was properly scheduled or not
 type JobReceiveResponse struct {
 	IsOkay string `json:"is_okay"`
 }
 
+//
 func scheduler() {
 	for {
 		serverThis.RWSocks.RLock()
@@ -116,6 +119,7 @@ func handleJobComplete(s *gotalk.Sock, r program.Result) (string, error) {
 	return "Okay", nil
 }
 
+// a common field to write output to the corresponding outfile: "./client/programs/"+r.ProgramId+"/output"
 func resultChanFeeder() {
 	for r := range resultChan {
 		f, err := os.OpenFile("./client/programs/"+r.ProgramId+"/output", os.O_APPEND|os.O_WRONLY, 0600)
@@ -128,6 +132,11 @@ func resultChanFeeder() {
 	}
 }
 
+// Creates jobs given the program ID
+// Assumes that parameters will be given in: "./client/programs/"+programID+"/input"
+// <end> ends this thread
+// <end_all> kills all the socks with this program ID. To be Implemented.
+// new jobs are assigned id and saved to serverThis.Jobs map
 func programJobCreator(programID string) {
 
 	t, err := tail.TailFile("./client/programs/"+programID+"/input",
@@ -154,12 +163,14 @@ func programJobCreator(programID string) {
 			// TODO: KILLL MEEEEEE
 			return
 		default:
+			// create a job object
 			newJob := job.Job{
 				ProgramId:    programID,
 				Parameters:   text,
 				CreationTime: time.Now(),
 			}
 
+			// save the job object to the map
 			serverThis.RWJobs.Lock()
 			_id := strconv.FormatInt(int64(len(serverThis.Jobs)+1), 10)
 			newJob.Id = _id
@@ -170,22 +181,22 @@ func programJobCreator(programID string) {
 
 }
 
+// Whenever a new client is added this function is called
 func onAcceptConnection(sock *gotalk.Sock) {
 	fmt.Println("Accepted: ", sock.Addr())
 
+	// updates: server.socks map
 	serverThis.RWSocks.Lock()
-	defer serverThis.RWSocks.Unlock()
-
 	serverThis.Socks[sock] = node.GetNode(sock)
-	// TODO: Add locks here
+	serverThis.RWSocks.Unlock()
+
+	// closer handler for the socks
 	sock.CloseHandler = func(s *gotalk.Sock, _ int) {
 		serverThis.RWSocks.Lock()
 		defer serverThis.RWSocks.Unlock()
 		delete(serverThis.Socks, s)
 		fmt.Println("Closed")
 	}
-
-	// add the node to the Nodes struct
 }
 
 func main() {
