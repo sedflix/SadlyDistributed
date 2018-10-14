@@ -29,6 +29,10 @@ type SendJob struct {
 	Parameters string `json:"parameters"` // input parameter
 }
 
+type NewProgram struct {
+	ProgramId string `json:"program_id"`
+}
+
 type JobReceiveResponse struct {
 	IsOkay string `json:"is_okay"`
 }
@@ -49,7 +53,7 @@ func scheduler() {
 							JobId:      job_.Id,
 							ProgramId:  job_.ProgramId,
 							Parameters: job_.Parameters,
-							Wasm:       "/primes/bigprimes.wasm",
+							Wasm:       "/programs/" + job_.ProgramId + "/main.wasm",
 						}
 						go func() {
 							jobRecieveResponse := &JobReceiveResponse{}
@@ -114,23 +118,24 @@ func handleJobComplete(s *gotalk.Sock, r program.Result) (string, error) {
 
 func resultChanFeeder() {
 	for r := range resultChan {
-		f, err := os.OpenFile(r.ProgramId+"_output", os.O_APPEND|os.O_WRONLY, 0600)
+		f, err := os.OpenFile("./client/programs/"+r.ProgramId+"/output", os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			fmt.Printf("UNABLE to write: %s \n", r.ProgramId)
 		}
 
 		defer f.Close()
 		fmt.Fprintf(f, "%s\t%s\n", r.Parameters, r.Result)
-		//fmt.Println(f, "get-task")
 	}
 }
 
 func programJobCreator(programID string) {
 
-	t, err := tail.TailFile(programID+"_input", tail.Config{
-		Follow: true,
-		ReOpen: true,
-	})
+	t, err := tail.TailFile("./client/programs/"+programID+"/input",
+		tail.Config{
+			Follow: true,
+			ReOpen: true,
+			Pipe:   true,
+		})
 
 	if err != nil {
 		fmt.Println("Unable to open the file for program id: %d", programID)
@@ -211,6 +216,13 @@ func main() {
 			serverThis.Socks[s].UpdateResourceUsed(r)
 			return "Okay", nil
 		})
+
+	//// Handler for making a new program
+	//gotalk.Handle("new-program",
+	//	func(s *gotalk.Sock, newProgram NewProgram) (string, error) {
+	//		go programJobCreator(newProgram.ProgramId)
+	//		return "Okay", nil
+	//	})
 
 	webSocketHandler := gotalk.WebSocketHandler()
 	webSocketHandler.OnAccept = onAcceptConnection
