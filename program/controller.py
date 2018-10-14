@@ -11,7 +11,7 @@ tasks_available = set()
 
 tasks_pending = set()
 
-i = 0
+i = 2
 while i*bucket_size < math.sqrt(prime):
     tasks_available.add((i*bucket_size, (i+1)*bucket_size))
     i += 1
