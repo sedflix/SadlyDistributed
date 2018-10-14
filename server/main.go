@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	serverThis server.Server                     // stores most of the info of the server
-	resultChan = make(chan program.Result, 1000) // results from sockets are fed into this common resultChan
+	serverThis     server.Server                     // stores most of the info of the server
+	resultChan     = make(chan program.Result, 1000) // results from sockets are fed into this common resultChan
+	hanlderLimiter = make(chan int, 1)
 )
 
 // struct for sending a job to the client
@@ -58,43 +59,41 @@ func scheduler() {
 							Parameters: job_.Parameters,
 							Wasm:       "/programs/" + job_.ProgramId + "/main.wasm",
 						}
-						go func() {
-							jobRecieveResponse := &JobReceiveResponse{}
-							err := sockThis.Request("receive-job", &sendJob, jobRecieveResponse)
-							if err != nil {
-								fmt.Println(err)
+
+						jobRecieveResponse := &JobReceiveResponse{}
+						err := sockThis.Request("receive-job", &sendJob, jobRecieveResponse)
+						if err != nil {
+							fmt.Println(err)
+						} else {
+
+							if strings.Compare(jobRecieveResponse.IsOkay, "Okay") == 0 {
+								job_.IsScheduled = true
+								job_.ScheduledTime = time.Now()
+								job_.Sock = sockThis
+
+								node_.IsNew = false
+								serverThis.Socks[sockThis] = node_
 							} else {
-
-								if strings.Compare(jobRecieveResponse.IsOkay, "Okay") == 0 {
-									job_.IsScheduled = true
-									job_.ScheduledTime = time.Now()
-									job_.Sock = sockThis
-
-									node_.IsNew = false
-									serverThis.Socks[sockThis] = node_
-								} else {
-									fmt.Printf("Job Receive Response error: %s \n", jobRecieveResponse.IsOkay)
-								}
-
+								fmt.Printf("Job Receive Response error: %s \n", jobRecieveResponse.IsOkay)
 							}
-							return
-						}()
-						break
-					}
-				}
-				serverThis.RWJobs.Unlock()
 
+						}
+						break
+					} // if - not scheduled ends
+				} // Jobs loops end
+				serverThis.RWJobs.Unlock()
 			} else {
 				fmt.Printf("node busy: %s \n", node_.Sock.Addr())
 			}
 		}
-		time.Sleep(1 * time.Second)
+		//time.Sleep(1 * time.Second)
 		serverThis.RWSocks.RUnlock()
 	}
 
 }
 
 func handleJobComplete(s *gotalk.Sock, r program.Result) (string, error) {
+	hanlderLimiter <- 1
 	fmt.Println("in job complete handler")
 
 	// Making the socket free
@@ -107,13 +106,14 @@ func handleJobComplete(s *gotalk.Sock, r program.Result) (string, error) {
 	// delete the job and write to a file
 	serverThis.RWJobs.Lock()
 	// why not write result to the job
-
 	// delete job
 	delete(serverThis.Jobs, r.JobId)
 	serverThis.RWJobs.Unlock()
 
 	// write to file
 	resultChan <- r
+
+	<-hanlderLimiter
 
 	fmt.Printf("Job Completed: %+v\n", r)
 	return "Okay", nil
@@ -192,7 +192,18 @@ func onAcceptConnection(sock *gotalk.Sock) {
 
 	// closer handler for the socks
 	sock.CloseHandler = func(s *gotalk.Sock, _ int) {
+
+		serverThis.RWJobs.Lock()
+		for job_id, job_ := range serverThis.Jobs {
+			if job_.IsScheduled == true && job_.Sock == s {
+				job_.IsScheduled = false
+				job_.Sock = nil
+				// Note: don't change the creation time
+				serverThis.Jobs[job_id] = job_
+			}
+		}
 		serverThis.RWSocks.Lock()
+
 		defer serverThis.RWSocks.Unlock()
 		delete(serverThis.Socks, s)
 		fmt.Println("Closed")
