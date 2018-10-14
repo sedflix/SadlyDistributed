@@ -7,5 +7,5 @@ wasm: client/primes/bigprimes.go
 staticserve:
 	@# do go get -u github.com/shurcooL/goexec first
 	@echo "go to localhost:8080"
-	@goexec 'http.ListenAndServe(":8080", http.FileServer(http.Dir("./client")))'
+	@goexec 'http.ListenAndServe("0.0.0.0:8080", http.FileServer(http.Dir("./client")))'
 	
