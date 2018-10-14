@@ -1,4 +1,4 @@
-package main
+package _
 
 import "os"
 import "math/big"
