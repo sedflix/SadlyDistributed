@@ -32,7 +32,8 @@ After that, you need to define how the range of values should be *divided* and h
 After you have defined this logic, we scale your code to all the browsers available to us.  
 
 You code interface with our architecture by reading and writing from files. We have two files:
-- `input`: You specify the parameters that your code will take in. Each parameters is present in a new line. Our prime number uses the following format:
+#### `input`
+You specify the parameters that your code will take in. Each parameters is present in a new line. Our prime number uses the following format:
 ```
 1 110000
 110000 9990000
@@ -45,7 +46,8 @@ Note that our distributed code, `bigprimes.go`, is written to understand these r
 `go run bigprimes.go 110000 9990000` will tell us weather our hardcoded number is divisible by anything between 110000 and 9990000. 
 Our architecture read this file continuously(as new input arrives or so called tail reading) and distributes the parameters over free nodes.
 
-- `output`: Our architecture writes the stdout(or output) received from various machine to this file.
+#### `output`
+Our architecture writes the stdout(or output) received from various machine to this file.
 Now it is upto you to utilize the info in this file for combining the result. Our prime number used the following format:
 ```
 1 110000    false
