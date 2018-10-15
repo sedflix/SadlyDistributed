@@ -4,7 +4,14 @@
  Zero Setup for volunteers. Easy for developers.  
  
  We compile **your distributed code in almost any language** to **WebAssembly** and then all of it is **executed in a cluster of browsers**.
- Anyone who just opens our website in their browser will become share his or her computing power with us.
+ Anyone who just opens our website in their browser will share his or her computing power with us.
+
+## Motivcation
+
+We are aware of the amazing computing power of our laptops and phones. What if the scientist around the world would be able to use it when its lying idl(which is most of the time)? What if everyone with a computing device, a browser, and a decent internet connection would be able to contribute to such amazing research happening around the world? Today's world is a sucker for computing resources. ML, AR, VR, Blockchain and tons of other cutting edge tech require tons of computing resources.
+
+There are several nice volunteer computing platform like BONIC, GridCoin, etc. But all of them suffer from a common problem: complex and heavy installation process. Even I, as a techie, hesitate to go through all that hassle. You know setting up anything sucks. Therefore, we came up with SadlyDistributed. 
+
 
 ## Installation 
 We <3 Docker. Hence, we have provided a Dockerfile that takes care of all the dependencies of our server code.
@@ -22,7 +29,7 @@ We <3 Docker. Hence, we have provided a Dockerfile that takes care of all the de
 ## Mini-Tutorial
 **How can you modify your distributed code for our architecture?**  
 
-We have an example program for finding if a number(it can be as large as you can think of) is prime or not. 
+We have an example program for finding if a number(it can be as large as you can think of) is prime or not.   
 Code: [/client/programs/1](/client/programs/1)  
 
 In general distributed computer, same code is replicated on multiple machines and each machine execute the code over a different range of values(or parameters). 
