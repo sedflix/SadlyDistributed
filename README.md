@@ -6,7 +6,7 @@
  We compile **your distributed code in almost any language** to **WebAssembly** and then all of it is **executed in a cluster of browsers**.
  Anyone who just opens our website in their browser will share his or her computing power with us.
 
-## Motivcation
+## Motivation
 
 We are aware of the amazing computing power of our laptops and phones. What if the scientist around the world would be able to use it when its lying idl(which is most of the time)? What if everyone with a computing device, a browser, and a decent internet connection would be able to contribute to such amazing research happening around the world? Today's world is a sucker for computing resources. ML, AR, VR, Blockchain and tons of other cutting edge tech require tons of computing resources.
 
